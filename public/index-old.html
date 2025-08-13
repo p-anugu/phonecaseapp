@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image/SVG to DXF Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            transition: border-color 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #999;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .upload-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-label:hover {
+            background-color: #45a049;
+        }
+        .options {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            display: none;
+        }
+        .option-group {
+            margin-bottom: 15px;
+        }
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .option-group input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        .option-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .range-value {
+            display: inline-block;
+            margin-left: 10px;
+            color: #666;
+        }
+        #convertBtn {
+            display: none;
+            width: 100%;
+            padding: 12px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        #convertBtn:hover {
+            background-color: #0b7dda;
+        }
+        #convertBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e7f3ff;
+            border-radius: 5px;
+            display: none;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image/SVG to DXF Converter</h1>
+        <p style="text-align: center; color: #666;">Convert images (PNG, JPG, etc.) or SVG files to DXF format</p>
+        
+        <div class="upload-area">
+            <p>Drag and drop your image or SVG file here or</p>
+            <label for="fileInput" class="upload-label">Choose File</label>
+            <input type="file" id="fileInput" accept=".svg,.png,.jpg,.jpeg,.gif,.bmp,image/*">
+        </div>
+        
+        <div id="fileInfo" class="file-info"></div>
+        
+        <div id="options" class="options">
+            <h3>Vectorization Options</h3>
+            <div class="option-group">
+                <label for="threshold">Black/White Threshold:</label>
+                <input type="range" id="threshold" min="0" max="100" value="50">
+                <span class="range-value" id="thresholdValue">50%</span>
+            </div>
+            
+            <div class="option-group">
+                <label for="colors">Color Posterization:</label>
+                <input type="range" id="colors" min="2" max="32" value="8">
+                <span class="range-value" id="colorsValue">8 colors</span>
+            </div>
+            
+            <div class="option-group">
+                <label>
+                    <input type="checkbox" id="preserveColors"> 
+                    Preserve Colors (experimental)
+                </label>
+            </div>
+        </div>
+        
+        <button id="convertBtn">Convert to DXF</button>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Converting... This may take a moment for complex images</p>
+        </div>
+        
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.querySelector('.upload-area');
+        const fileInfo = document.getElementById('fileInfo');
+        const convertBtn = document.getElementById('convertBtn');
+        const message = document.getElementById('message');
+        const loading = document.getElementById('loading');
+        const options = document.getElementById('options');
+        
+        // Options
+        const threshold = document.getElementById('threshold');
+        const thresholdValue = document.getElementById('thresholdValue');
+        const colors = document.getElementById('colors');
+        const colorsValue = document.getElementById('colorsValue');
+        const preserveColors = document.getElementById('preserveColors');
+        
+        let selectedFile = null;
+
+        // Update range displays
+        threshold.addEventListener('input', (e) => {
+            thresholdValue.textContent = e.target.value + '%';
+        });
+        
+        colors.addEventListener('input', (e) => {
+            colorsValue.textContent = e.target.value + ' colors';
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#999';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#ccc';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ccc';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+            
+            let info = `<strong>Selected:</strong> ${file.name} (${(file.size / 1024).toFixed(2)} KB)<br>`;
+            info += `<strong>Type:</strong> ${file.type || 'Unknown'}`;
+            
+            if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+                // Show preview for raster images
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    info += `<br><img src="${e.target.result}" class="preview">`;
+                    fileInfo.innerHTML = info;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                fileInfo.innerHTML = info;
+            }
+            
+            fileInfo.style.display = 'block';
+            convertBtn.style.display = 'block';
+            message.style.display = 'none';
+            
+            // Show options for non-SVG images
+            if (!isSvg) {
+                options.style.display = 'block';
+                showMessage('Raster image detected. It will be vectorized before conversion.', 'info');
+            } else {
+                options.style.display = 'none';
+            }
+        }
+
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            // Add options for image files
+            if (!selectedFile.name.toLowerCase().endsWith('.svg')) {
+                formData.append('threshold', threshold.value);
+                formData.append('colors', colors.value);
+                formData.append('preserveColors', preserveColors.checked);
+            }
+
+            convertBtn.disabled = true;
+            loading.style.display = 'block';
+            message.style.display = 'none';
+
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = selectedFile.name.replace(/\.[^/.]+$/, '.dxf');
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showMessage('Conversion successful! Download started.', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Conversion failed', 'error');
+                }
+            } catch (err) {
+                showMessage('Network error. Please try again.', 'error');
+            } finally {
+                convertBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

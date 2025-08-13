@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image to DXF Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .size-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .size-options label {
+            font-weight: normal;
+            cursor: pointer;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .result-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .result-image {
+            max-width: 100%;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .download-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .phone-case-section {
+            width: 100%;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        .phone-case-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .download-btn {
+            padding: 8px 16px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .download-btn:hover {
+            background-color: #0b7dda;
+        }
+        .tips {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .tips h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        .tips ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Image to DXF Generator</h1>
+        <p style="text-align: center; color: #666;">Generate images with DALL-E 3 and convert them to DXF format</p>
+        
+
+        <div class="form-group">
+            <label for="prompt">Image Prompt</label>
+            <textarea id="prompt" placeholder="Describe the image you want to generate... (e.g., 'heart', 'star', 'flower', 'cat face')" required></textarea>
+            <small style="color: #666; display: block; margin-top: 5px;">
+                💡 <strong>Best results:</strong> Simple subjects like "heart", "star", "flower", "cat face", "peace sign"<br>
+                ✨ The AI will automatically create centered, simple line art perfect for cutting/engraving
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label>Output Dimensions</label>
+            <div style="padding: 10px; background-color: #e7f3ff; border-radius: 4px;">
+                <strong>Fixed size: 60mm × 60mm</strong><br>
+                <small style="color: #666;">Compact size perfect for phone cases, keychains, and small decorations</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="includePhoneCase" checked> 
+                Include iPhone 12 Case Template
+            </label>
+            <small style="color: #666; display: block; margin-left: 24px;">Generates an additional file with your design positioned on an iPhone 12 case</small>
+        </div>
+
+        <button id="generateBtn" onclick="generateAndConvert()">Generate & Convert to DXF</button>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Generating AI image and converting to DXF... This may take a moment.</p>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div id="resultContainer" class="result-container">
+            <h3>Result</h3>
+            <img id="resultImage" class="result-image" alt="Generated image">
+            <div class="download-buttons" id="downloadButtons"></div>
+        </div>
+
+        <div class="tips">
+            <h3>💡 How It Works</h3>
+            <ul>
+                <li><strong>Automatic Enhancement:</strong> All prompts are automatically converted to create simple line art</li>
+                <li><strong>No Shading:</strong> Images will have clean black lines on white background only</li>
+                <li><strong>Vector-Ready:</strong> Output is optimized for laser cutting, CNC, and vinyl cutting</li>
+                <li><strong>Example prompts:</strong> "cat", "flower", "mountain", "house" - all will become simple line drawings!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+
+        async function generateAndConvert() {
+            const prompt = document.getElementById('prompt').value.trim();
+            const size = '1024x1024'; // Use square format for 100x100mm
+            const includePhoneCase = document.getElementById('includePhoneCase').checked;
+
+            if (!prompt) {
+                showMessage('Please enter a prompt for the image', 'error');
+                return;
+            }
+
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const resultContainer = document.getElementById('resultContainer');
+
+            generateBtn.disabled = true;
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+            hideMessage();
+
+            try {
+                const response = await fetch('/api/generate-and-convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt,
+                        size,
+                        includePhoneCase
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult(data);
+                    showMessage('Image generated and converted successfully!', 'success');
+                } else {
+                    showMessage(data.error || 'Failed to generate image', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+                console.error('Error:', error);
+            } finally {
+                generateBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showResult(data) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultImage = document.getElementById('resultImage');
+            const downloadButtons = document.getElementById('downloadButtons');
+
+            resultImage.src = data.imageUrl;
+            
+            let buttonsHtml = `
+                <a href="${data.dxfUrl}" download="${data.filename}.dxf" class="download-btn">Download DXF</a>
+                <a href="${data.svgUrl}" download="${data.filename}.svg" class="download-btn">Download SVG</a>
+                <a href="${data.imageUrl}" download="${data.filename}.png" class="download-btn">Download PNG</a>
+            `;
+            
+            if (data.phoneCaseDxfUrl) {
+                buttonsHtml += `
+                    <div class="phone-case-section">
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">📱 Phone Case Files (Design scaled 4x and centered)</p>
+                        <div class="phone-case-buttons">
+                            <a href="${data.phoneCaseDxfUrl}" download="${data.filename}-phone-case.dxf" class="download-btn" style="background-color: #9c27b0;">Download Phone Case DXF</a>
+                            <a href="${data.phoneCaseSvgUrl}" download="${data.filename}-phone-case.svg" class="download-btn" style="background-color: #9c27b0;">Download Phone Case SVG</a>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            downloadButtons.innerHTML = buttonsHtml;
+
+            resultContainer.style.display = 'block';
+        }
+
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Phone Case Designer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .api-key-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .prompt-examples {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        .example {
+            display: inline-block;
+            margin: 2px;
+            padding: 4px 8px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .example:hover {
+            background-color: #d0d0d0;
+        }
+        #generateBtn {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #generateBtn:hover {
+            background-color: #45a049;
+        }
+        #generateBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        .status.success {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        .status.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .progress-steps {
+            display: none;
+            margin-top: 20px;
+        }
+        .step {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            opacity: 0.5;
+        }
+        .step.active {
+            opacity: 1;
+            background-color: #e3f2fd;
+        }
+        .step.complete {
+            opacity: 1;
+            background-color: #e8f5e9;
+        }
+        .preview {
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+        .preview img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .download-links {
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+        .download-btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .download-btn:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 AI Phone Case Designer</h1>
+        <p style="text-align: center; color: #666;">Generate unique line art designs for iPhone 12 cases using AI</p>
+        
+        <div class="api-key-section">
+            <div class="form-group">
+                <label for="apiKey">OpenAI API Key:</label>
+                <input type="password" id="apiKey" placeholder="sk-..." required>
+                <small style="color: #666;">Your API key is only used in the browser and is not stored</small>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="prompt">Design Prompt:</label>
+            <textarea id="prompt" placeholder="Describe the line art design you want...">minimalist geometric pattern with circles and triangles</textarea>
+            <div class="prompt-examples">
+                <strong>Examples:</strong>
+                <span class="example">geometric mandala</span>
+                <span class="example">abstract flowing lines</span>
+                <span class="example">minimalist mountain landscape</span>
+                <span class="example">floral vine pattern</span>
+                <span class="example">zen circle design</span>
+                <span class="example">tribal pattern</span>
+            </div>
+        </div>
+        
+        <button id="generateBtn">Generate Phone Case Design</button>
+        
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Creating your design...</p>
+        </div>
+        
+        <div class="progress-steps">
+            <div class="step" id="step1">1. Generating line art with DALL-E...</div>
+            <div class="step" id="step2">2. Converting to vector format...</div>
+            <div class="step" id="step3">3. Combining with phone case template...</div>
+            <div class="step" id="step4">4. Converting to DXF for manufacturing...</div>
+        </div>
+        
+        <div class="status" id="status"></div>
+        
+        <div class="preview" id="preview">
+            <h3>Preview:</h3>
+            <img id="previewImage" src="" alt="Phone case preview">
+        </div>
+        
+        <div class="download-links" id="downloadLinks">
+            <a href="#" class="download-btn" id="downloadSvg">Download SVG</a>
+            <a href="#" class="download-btn" id="downloadDxf">Download DXF</a>
+        </div>
+    </div>
+
+    <script>
+        const apiKeyInput = document.getElementById('apiKey');
+        const promptInput = document.getElementById('prompt');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.querySelector('.loading');
+        const progressSteps = document.querySelector('.progress-steps');
+        const status = document.getElementById('status');
+        const preview = document.getElementById('preview');
+        const previewImage = document.getElementById('previewImage');
+        const downloadLinks = document.getElementById('downloadLinks');
+        const downloadSvg = document.getElementById('downloadSvg');
+        const downloadDxf = document.getElementById('downloadDxf');
+        
+        // Example prompts
+        document.querySelectorAll('.example').forEach(example => {
+            example.addEventListener('click', () => {
+                promptInput.value = example.textContent;
+            });
+        });
+        
+        // Save API key to localStorage
+        apiKeyInput.addEventListener('change', () => {
+            localStorage.setItem('openai_api_key', apiKeyInput.value);
+        });
+        
+        // Load API key from localStorage
+        const savedKey = localStorage.getItem('openai_api_key');
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+        }
+        
+        function updateStep(stepNumber, status) {
+            const step = document.getElementById(`step${stepNumber}`);
+            if (status === 'active') {
+                step.classList.add('active');
+                step.classList.remove('complete');
+            } else if (status === 'complete') {
+                step.classList.remove('active');
+                step.classList.add('complete');
+            }
+        }
+        
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+        
+        generateBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            const prompt = promptInput.value.trim();
+            
+            if (!apiKey) {
+                showStatus('Please enter your OpenAI API key', 'error');
+                return;
+            }
+            
+            if (!prompt) {
+                showStatus('Please enter a design prompt', 'error');
+                return;
+            }
+            
+            generateBtn.disabled = true;
+            loading.style.display = 'block';
+            progressSteps.style.display = 'block';
+            status.style.display = 'none';
+            preview.style.display = 'none';
+            downloadLinks.style.display = 'none';
+            
+            // Reset steps
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`step${i}`).className = 'step';
+            }
+            
+            try {
+                // Call API endpoint
+                const formData = new FormData();
+                formData.append('apiKey', apiKey);
+                formData.append('prompt', prompt);
+                
+                updateStep(1, 'active');
+                
+                const response = await fetch('/api/generate-case-art', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Generation failed');
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                
+                                if (data.step) {
+                                    updateStep(data.step, 'complete');
+                                    if (data.step < 4) {
+                                        updateStep(data.step + 1, 'active');
+                                    }
+                                }
+                                
+                                if (data.complete) {
+                                    updateStep(4, 'complete');
+                                    showStatus('Design generated successfully!', 'success');
+                                    
+                                    // Show preview
+                                    previewImage.src = data.svgPath;
+                                    preview.style.display = 'block';
+                                    
+                                    // Setup download links
+                                    downloadSvg.href = data.svgPath;
+                                    downloadSvg.download = 'phone-case-design.svg';
+                                    downloadDxf.href = data.dxfPath;
+                                    downloadDxf.download = 'phone-case-design.dxf';
+                                    downloadLinks.style.display = 'block';
+                                }
+                            } catch (e) {
+                                console.error('Parse error:', e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                showStatus(error.message, 'error');
+            } finally {
+                generateBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
